@@ -52,15 +52,13 @@ def main() -> None:
         while True:
             print(f"[質問] {question}\n")
             print(ask(chat, question))
-            print("\n続けて質問できます（終了するには quit または exit）。")
+            print("\n続けて質問できます（終了するには空行）。")
             try:
                 question = input("> ").strip()
             except EOFError:
                 break
-            if question.lower() in {"quit", "exit"}:
-                break
             if not question:
-                continue
+                break
     except errors.APIError as e:
         print(api_error_message(e.code, e.message))
         raise SystemExit(1)
