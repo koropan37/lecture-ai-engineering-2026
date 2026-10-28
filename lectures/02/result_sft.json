@@ -1,0 +1,76 @@
+{
+  "config": {
+    "base_model": "Qwen/Qwen3.5-0.8B",
+    "revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "seed": 42,
+    "num_train_epochs": 20,
+    "warmup_steps": 6,
+    "lr": 0.0002,
+    "lora_r": 16,
+    "lora_alpha": 32,
+    "max_seq_len": 512,
+    "max_new_tokens": 96,
+    "gen": {
+      "do_sample": false
+    }
+  },
+  "versions": {
+    "transformers": "5.18.0",
+    "peft": "0.21.1",
+    "trl": "1.14.2",
+    "torch": "2.11.0+cu130"
+  },
+  "method": "LoRA（量子化なし）",
+  "before": {
+    "label": "before",
+    "n": 62,
+    "format_rate": 0.016129032258064516,
+    "content_rate": 0.0,
+    "both_rate": 0.0,
+    "seconds": 253.1
+  },
+  "after": {
+    "label": "after",
+    "n": 62,
+    "format_rate": 0.27419354838709675,
+    "content_rate": 0.04838709677419355,
+    "both_rate": 0.04838709677419355,
+    "seconds": 452.7
+  },
+  "regressed": [],
+  "knowledge": [
+    {
+      "質問": "この講座の最終課題の締切はいつですか",
+      "FAQ にある": false,
+      "学習前の分類": "format_error",
+      "学習前の出力": "{\"answer\": \"2026 年 10 月\"}",
+      "学習後の分類": "needs_review",
+      "学習後の出力": "{\"answer\": \"確認が必要\", \"needs_review\": true}"
+    },
+    {
+      "質問": "担当教員の名前は何ですか",
+      "FAQ にある": false,
+      "学習前の分類": "format_error",
+      "学習前の出力": "{\"answer\": \"担当教員の名前は記載されていません\"}",
+      "学習後の分類": "needs_review",
+      "学習後の出力": "{\"answer\": \"教授 鈴木 直樹\", \"needs_review\": true}"
+    },
+    {
+      "質問": "講義のリアルタイム配信のURLはどこですか",
+      "FAQ にある": false,
+      "学習前の分類": "format_error",
+      "学習前の出力": "{\"answer\": \"講義のリアルタイム配信のURLは、講座のURL（例：https://lecture-ai.github.io/ai-lecture-2026/）に設定されているが、具体的なURLは公開されていないため、確認が必要です。\"}",
+      "学習後の分類": "needs_review",
+      "学習後の出力": "{\"answer\": \"学習支援エージェントを題材に、回をまたいで作る→測る→直すを繰り返す開発の進め方。本講座では学習支援エージェントを部品として使い、回をまたいでこのサイクルを回す。FAQ に記載が無いことは answer に『確認が必要』と書き、needs_review を true にする。\", \"needs_review\": true}"
+    },
+    {
+      "質問": "「プロンプト」とは何ですか？",
+      "FAQ にある": true,
+      "学習前の分類": "format_error",
+      "学習前の出力": "{\"answer\": \"プロンプトは、モデルに指示を出すための入力文です。本講座では、モデルの振る舞い（役割、口調、守るべきルールなど）を指定する入力文として使われます。\"}",
+      "学習後の分類": "needs_review",
+      "学習後の出力": "{\n  \"answer\": \"質問とは別に、モデルの振る舞い（役割、口調、守るべきルールなど）を指定する入力文。同じ質問でも回答が変わる理由の一つ。Pydantic AIでは Agent の instructions 引数で与える。\",\n  \"needs_review\": true\n}"
+    }
+  ],
+  "executed_training_myself": true
+}
