@@ -81,10 +81,11 @@ def get_lecture_summary(lecture: int) -> str:
 
 
 def make_quiz(lecture: int) -> str:
-    """指定した回の用語から 1つを選び、
-    確認問題と答えを返す。
-    「第2回の確認問題を出して」のように、
-    復習用の問題を求められたときに使う。
+    """指定した講義回の用語から1つ選び、確認問題と答えをJSONで返す。
+    「第2回の確認問題を出して」のような復習依頼に使う。
+    用語がない講義回の場合はエラー情報を返す。
+    Args:
+        lecture: 講義回。1始まりの整数。
     """
     terms = [entry for entry in load_glossary() if entry["lecture"] == lecture]
     if not terms:
