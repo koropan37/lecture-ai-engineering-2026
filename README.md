@@ -15,7 +15,11 @@ AIエンジニアリング実践講座（AIE2026）の演習と宿題で使う�
 | Gemini API（Google AI Studio の無料枠） | LLM の呼び出し。**個人**の Google アカウントでキーを発行し、Codespaces secret `GEMINI_API_KEY` で渡します | 無料枠には 1 分あたり・1 日あたりの上限があります（下の「前提と制約」） |
 | Google Colab（T4 GPU、無料枠） | 第2回の LoRA 学習だけに使います | GPU の利用時間に上限があります。終わったらランタイムを削除してください |
 
-自分の PC で動かす場合は、Python 3.12 と [uv](https://docs.astral.sh/uv/) を入れて `uv sync --frozen` を実行し、環境変数 `GEMINI_API_KEY` を設定してください。
+自分の PC で動かす場合は、Python 3.12 と [uv](https://docs.astral.sh/uv/) を入れて `uv sync --frozen` を実行し、環境変数 `GEMINI_API_KEY` を設定してください。VS Code の Dev Container として開く場合は、Codespaces でなくても `.devcontainer/` の設定が使われ、`agy` もコンテナ作成時に自動でインストールされます。コンテナを使わずホスト上で直接開発する場合は、次のコマンドで `agy` をインストールしてください。
+
+```bash
+curl -fsSL https://antigravity.google/cli/install.sh | bash
+```
 
 ## はじめに（第1回）
 

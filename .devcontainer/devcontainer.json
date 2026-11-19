@@ -16,7 +16,7 @@
       "documentationUrl": "https://aistudio.google.com/apikey"
     }
   },
-  "postCreateCommand": "pipx install uv && uv sync --frozen",
+  "postCreateCommand": "pipx install uv && uv sync --frozen && curl -fsSL https://antigravity.google/cli/install.sh | bash",
   "customizations": {
     "vscode": {
       "extensions": ["ms-python.python", "GitHub.copilot-chat"],
