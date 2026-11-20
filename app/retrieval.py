@@ -50,27 +50,30 @@ def load_pages(source: Path = RAG_SOURCE) -> list[dict]:
 
 
 def browse_tree(node_id: str | None = None) -> dict:
-    """直下のページは先頭文、指定したページ自身は全文を返す。"""
+    """ルートでは講義と章の一覧、章では直下ページの先頭文、ページでは全文を返す。"""
     tree = json.loads(RAG_TREE.read_text(encoding="utf-8"))
     tree["children"] = [node for node in tree["children"] if node["id"] in RAG_DOCUMENT_IDS]
     node_id = node_id or tree["id"]
     pages = {page["page_id"]: page for page in load_pages(RAG_SOURCE)}
 
-    def describe(node, full=False):
+    def describe(node, full=False, include_sections=False):
         info = {key: node[key] for key in ("id", "kind", "title")}
         if node["kind"] == "page":
             info.update({key: value for key, value in pages[node["id"]].items() if key != "page_id"})
             if not full:
                 info["content"] = re.split(r"(?<=[。！？])|\n", info["content"].strip(), maxsplit=1)[0]
+        elif include_sections and node["kind"] == "document":
+            info["children"] = [describe(section) for section in node.get("children", [])]
         return info
 
     remaining = [tree]
     while remaining:
         node = remaining.pop()
         if node["id"] == node_id:
+            include_sections = node["kind"] == "collection"
             return {
                 "node": describe(node, full=True),
-                "children": [describe(child) for child in node.get("children", [])],
+                "children": [describe(child, include_sections=include_sections) for child in node.get("children", [])],
             }
         remaining.extend(node.get("children", []))
     raise ValueError("対象の目次ノードが見つかりません。")
@@ -124,18 +127,40 @@ def open_index(path: Path):
         db.close()
 
 
-def search(query: str) -> list[dict]:
-    """質問を埋め込み、近いページを最大RAG_TOP_K件返す。"""
+def search(query: str, neighbor_pages: int = 0) -> list[dict]:
+    """質問を埋め込み、近いページを最大RAG_TOP_K件（前後neighbor_pagesページ付き）で返す。"""
     if not isinstance(query, str) or not query.strip():
         raise ValueError("検索語が空です。")
     with open_index(RAG_DB) as db:
         vector = embed_text(query.strip(), "RETRIEVAL_QUERY")
-        rows = db.execute("""
-            SELECT page_id, document_id, lecture, document_title, section, title, page, content,
-                   vec_distance_cosine(embedding, ?) AS distance
-            FROM chunks ORDER BY distance, page_id LIMIT ?
-        """, (sqlite_vec.serialize_float32(vector), RAG_TOP_K))
-        return [dict(row) for row in rows]
+        hits = [
+            dict(row)
+            for row in db.execute("""
+                SELECT page_id, document_id, lecture, document_title, section, title, page, content,
+                       vec_distance_cosine(embedding, ?) AS distance
+                FROM chunks ORDER BY distance, page_id LIMIT ?
+            """, (sqlite_vec.serialize_float32(vector), RAG_TOP_K))
+        ]
+        if neighbor_pages <= 0 or not hits:
+            return hits
+
+        hit_by_id = {hit["page_id"]: hit for hit in hits}
+        results = []
+        seen = set()
+        for hit in hits:
+            rows = db.execute("""
+                SELECT page_id, document_id, lecture, document_title, section, title, page, content
+                FROM chunks
+                WHERE document_id = ? AND page BETWEEN ? AND ?
+                ORDER BY page
+            """, (hit["document_id"], hit["page"] - neighbor_pages, hit["page"] + neighbor_pages))
+            for row in rows:
+                page_id = row["page_id"]
+                if page_id in seen:
+                    continue
+                seen.add(page_id)
+                results.append(hit_by_id.get(page_id, {**dict(row), "distance": None}))
+        return results
 
 
 def search_graph(query: str) -> dict:
@@ -151,9 +176,11 @@ def search_graph(query: str) -> dict:
             adjacent[a].add(b)
             adjacent[b].add(a)
 
-    seeds = [hit for hit in search(query) if hit["page_id"] in pages][:min(GRAPH_START_K, GRAPH_MAX_RESULTS)]
+    seeds = [hit for hit in search(query, neighbor_pages=0) if hit["page_id"] in pages][:min(GRAPH_START_K, GRAPH_MAX_RESULTS)]
     seed_ids = {seed["page_id"] for seed in seeds}
     results, candidates = [], {}
+    reached_seeds = defaultdict(set)
+    reached_terms = defaultdict(set)
     for rank, seed in enumerate(seeds):
         root = seed["page_id"]
         results.append({**pages[root], "distance": seed["distance"], "hops": 0,
@@ -167,20 +194,29 @@ def search_graph(query: str) -> dict:
             # 同じ深さなら、接続先が少ない用語からたどる。
             neighbors = sorted(adjacent[current], key=lambda n: (len(adjacent[n]), n))
             for neighbor in neighbors:
+                route = path + [neighbor]
+                if neighbor in pages and neighbor not in seed_ids:
+                    reached_seeds[neighbor].add(root)
+                    reached_terms[neighbor].update(n for n in route if nodes[n]["kind"] == "term")
                 if neighbor in visited:
                     continue
                 visited.add(neighbor)
-                route = path + [neighbor]
                 queue.append((neighbor, route))
                 if neighbor not in pages or neighbor in seed_ids:
                     continue
                 frequency = max((len(adjacent[n]) for n in route if nodes[n]["kind"] == "term"), default=0)
-                priority = (len(route) - 1, frequency, rank, neighbor)
+                base_priority = (len(route) - 1, frequency, rank, neighbor)
                 candidate = {**pages[neighbor], "hops": len(route) - 1,
                              "path": [{"id": n, "title": nodes[n]["title"]} for n in route]}
-                if neighbor not in candidates or priority < candidates[neighbor][0]:
-                    candidates[neighbor] = (priority, candidate)
-    expanded = [candidate for _, candidate in sorted(candidates.values())]
+                if neighbor not in candidates or base_priority < candidates[neighbor][0]:
+                    candidates[neighbor] = (base_priority, candidate)
+    expanded = [
+        {**candidate, "seed_hits": len(reached_seeds[page_id]), "term_hits": len(reached_terms[page_id])}
+        for page_id, (_, candidate) in sorted(
+            candidates.items(),
+            key=lambda item: (-len(reached_seeds[item[0]]), -len(reached_terms[item[0]]), item[1][0]),
+        )
+    ]
     return {"seeds": results, "expanded": expanded[:max(0, GRAPH_MAX_RESULTS - len(results))],
             "max_hops": GRAPH_HOPS}
 
