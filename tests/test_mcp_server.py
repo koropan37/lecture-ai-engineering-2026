@@ -42,6 +42,7 @@ def test_glossary_server_exposes_search_tool(tmp_path):
 
     offered = {t.name for t in model.last_model_request_parameters.function_tools}
     assert GLOSSARY_TOOL in offered  # 宿題でツールを足しても壊れないよう「含む」で判定
+    assert "glossary_make_quiz" in offered
 
 
 def test_glossary_result_comes_back_through_mcp(tmp_path):
