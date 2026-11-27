@@ -120,6 +120,7 @@
         ワークスペース設定では該当するワークススペースでのみ有効になる。
         プラグインではグローバル、ワークスペースのどちらも配置可能
 
+    日付:2026年11月27日(金) 17:00
     URL：https://antigravity.google/docs/mcp/
         https://antigravity.google/docs/build-plugins/
 
