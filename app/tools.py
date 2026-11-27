@@ -138,10 +138,18 @@ def make_quiz(lecture: int) -> str:
     Args:
         lecture: 講義回。1始まりの整数。
     """
-    terms = [entry for entry in load_glossary() if entry["lecture"] == lecture]
+    glossary = load_glossary()
+    terms = [entry for entry in glossary if entry["lecture"] == lecture]
     if not terms:
+        available = sorted({entry["lecture"] for entry in glossary})
+        available_str = ", ".join(f"第{n}回" for n in available)
         return json.dumps(
-            {"error": f"第{lecture}回の用語が見つかりません。"},
+            {
+                "error": (
+                    f"第{lecture}回の用語が見つかりません（講義回が範囲外です）。"
+                    f"指定できる講義回: {available_str}"
+                )
+            },
             ensure_ascii=False,
         )
 

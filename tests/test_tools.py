@@ -57,3 +57,16 @@ def test_save_learning_log(tmp_path, monkeypatch):
     files = list(tmp_path.glob("*.md"))
     assert len(files) == 1
     assert files[0].read_text(encoding="utf-8") == "LoRAについて学んだ。"
+
+
+def test_make_quiz_returns_question_and_answer():
+    result = json.loads(tools.make_quiz(1))
+    assert "question" in result
+    assert "answer" in result
+
+
+def test_make_quiz_out_of_range_returns_clear_message():
+    result = json.loads(tools.make_quiz(99))
+    assert "error" in result
+    assert "第99回" in result["error"]
+    assert "指定できる講義回" in result["error"]
